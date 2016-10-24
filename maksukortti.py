@@ -79,4 +79,6 @@ def main():
 
     maksukortti.annaSaldo()
 
+    print("Lippusi on voimassa: {}".format(maksukortti.tarkistaLippu(1)))
+
 main()
