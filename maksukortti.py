@@ -25,19 +25,12 @@ class Maksukortti:
 
     def tarkistaLippu(self, zone):
         """Lippu on voimassa jos lipun zone on vähemmän kuin tarkistus-zone ja aika on enemmän kuin 2 tuntia menneisyydessä"""
-        checkTime = datetime.now() - timedelta(hours = 2)
-
-        if self.lippu == None:
-            return False
-        elif self.lippu["zone"] >= zone and self.lippu["aika"] > checkTime:
-            return True  
+        if self.lippu:
+            self.lippu.tarkista_lippu(zone)
         return False
     
     def lataaLippu(self, zone):
-        self.lippu = {
-            "aika" : datetime.now(),
-            "zone" : zone
-        }
+        self.lippu = Lippu(zone)
 
 class LippuAutomaatti:
     """Lippuautomaatti josta voidaan ostaa lippuja"""
@@ -63,22 +56,56 @@ class LippuAutomaatti:
         else:
             print("Lipun osto vyöhykkeelle {zone} epäonnistui. Kortillasi on jo voimassaoleva lippu vyöhykkeelle: {korttiZone}".format(
                 zone=zone,
-                korttiZone=maksukortti.lippu["zone"])
+                korttiZone=maksukortti.lippu.zone)
             )
             return False
 
         return False
         
+class Lippu:
+    def __init__(self, zone):
+        hours = 2 # ticket is valid two hours from purchase time
+        timeNow = datetime.now()
+        checkTime = timeNow + timedelta(hours = hours)
+
+        self.zone = zone
+        self.buyTime = timeNow
+        self.checkTime = checkTime
+    
+    def tarkista_lippu(self, zone):
+        timeNow = datetime.now()
+        timeDiff = self.checkTime - timeNow
+        diffInMinutes =  round(timeDiff.total_seconds() / 60, 1)
+
+        if self.zone >= zone and self.checkTime > timeNow:
+            print("Lippu on voimassa ({minutes} min). Tarkistusvyöhyke: {zone}".format(zone=zone,minutes=diffInMinutes))
+            return True
+        
+        print("Lippu ei ole voimassa. Tarkistusvyöhyke: {zone}".format(zone=zone))
+        return False
+
+class Hinnat:
+    luettelo = (
+        2.90, # zone 1
+        3.50, # zone 2
+        4.50  # zone 3
+    )
+
+    @staticmethod
+    def anna_hinta(zone):
+        if zone in range(0,len(Hinnat.luettelo)):
+            return Hinnat.luettelo[zone]
+        return False
 
 def main():
+    
     lippuAutomaatti = LippuAutomaatti("VR123")
     maksukortti = Maksukortti(0)
 
     maksukortti.lataaRahaa(3.00)
     lippuAutomaatti.ostaLippu(1, maksukortti)
 
-    maksukortti.annaSaldo()
+    maksukortti.tarkistaLippu(1)
 
-    print("Lippusi on voimassa: {}".format(maksukortti.tarkistaLippu(1)))
 
 main()
